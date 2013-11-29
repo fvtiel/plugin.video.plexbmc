@@ -48,19 +48,53 @@ except ImportError:
     import pickle
 
 try:
-    import xml.etree.cElementTree as etree
+  from lxml import etree
+  print("PleXBMC -> Running with lxml.etree")
 except ImportError:
-    import xml.etree.ElementTree as etree
+  try:
+    # Python 2.5
+    import xml.etree.cElementTree as etree
+    print("PleXBMC -> Running with cElementTree on Python 2.5+")
+  except ImportError:
+    try:
+      # Python 2.5
+      import xml.etree.ElementTree as etree
+      print("PleXBMC -> Running with ElementTree on Python 2.5+")
+    except ImportError:
+      try:
+        # normal cElementTree install
+        import cElementTree as etree
+        print("PleXBMC -> Running with built-in cElementTree")
+      except ImportError:
+        try:
+          # normal ElementTree install
+          import elementtree.ElementTree as etree
+          print("PleXBMC -> Running with built-in ElementTree")
+        except ImportError:
+            try:
+                import ElementTree as etree
+                print("PleXBMC -> Running addon ElementTree version")
+            except ImportError:
+                print("PleXBMC -> Failed to import ElementTree from any known place")
 
 __addon__ = xbmcaddon.Addon()
 __cachedir__ = __addon__.getAddonInfo('profile')
 __settings__ = xbmcaddon.Addon(id='plugin.video.plexbmc')
 __cwd__ = __settings__.getAddonInfo('path')
-BASE_RESOURCE_PATH = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
-PLUGINPATH=xbmc.translatePath( os.path.join( __cwd__) )
-CACHEDATA=PLUGINPATH+"/cache"
+BASE_RESOURCE_PATH = xbmc.translatePath(os.path.join(__cwd__, 'resources', 'lib'))
+PLUGINPATH = xbmc.translatePath(os.path.join(__cwd__))
+CACHEDATA = __cachedir__
 sys.path.append(BASE_RESOURCE_PATH)
 PLEXBMC_VERSION = __addon__.getAddonInfo('version')
+
+#__cachedir__ = xbmcaddon.Addon().getAddonInfo('profile')
+#__settings__ = xbmcaddon.Addon(id='plugin.video.plexbmc')
+#__cwd__ = __settings__.getAddonInfo('path')
+#BASE_RESOURCE_PATH = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
+#PLUGINPATH=xbmc.translatePath( os.path.join( __cwd__) )
+#CACHEDATA=__cachedir__
+#sys.path.append(BASE_RESOURCE_PATH)
+#PLEXBMC_VERSION="3.2.2"
 
 print "===== PLEXBMC START ====="
 
@@ -198,6 +232,7 @@ g_skipmediaflags= __settings__.getSetting("skipflags")
 g_skipimages= __settings__.getSetting("skipimages")
 
 g_loc = "special://home/addons/plugin.video.plexbmc"
+#g_loc = PLUGINPATH
 
 #Create the standard header structure and load with a User Agent to ensure we get back a response.
 g_txheaders = {
@@ -1149,7 +1184,7 @@ def displaySections( filter=None, shared=False ):
             if g_skipcontext == "false":
                 context=[]
                 refreshURL="http://"+section.get('address')+section.get('path')+"/refresh"
-                libraryRefresh = "XBMC.RunScript("+g_loc+"/default.py, update ," + refreshURL + ")"
+                libraryRefresh = "RunScript(plugin.video.plexbmc, update ," + refreshURL + ")"
                 context.append(('Refresh library section', libraryRefresh , ))
             else:
                 context=None
@@ -1350,7 +1385,7 @@ def buildContextMenu( url, itemData ):
     context=[]
     server=getServerFromURL(url)
     refreshURL=url.replace("/all", "/refresh")
-    plugin_url="XBMC.RunScript("+g_loc+"/default.py, "
+    plugin_url="RunScript(plugin.video.plexbmc, "
     ID=itemData.get('ratingKey','0')
 
     #Initiate Library refresh
@@ -4587,6 +4622,19 @@ def fullShelf(server_list=None):
         shelfChannel(server_list)
     else:
         pass
+
+def dump_to_log(item, logfile='plexbmc.log'):
+    #pp = pprint.PrettyPrinter(depth=6)
+    #filename = PLUGINPATH+'/'+ logfile
+    #scriptlog = open(filename, 'w')
+    #pptext = pp.pformat(item)
+    #scriptlog.write(pptext)
+    #scriptlog.write
+    #scriptlog.close()
+    print "=LOG="
+    print str(item)
+    print "=END LOG="
+    return
 
 def clearShelf (movieCount=0, seasonCount=0, musicCount=0, photoCount=0):
     #Clear out old data
