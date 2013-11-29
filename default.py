@@ -78,26 +78,19 @@ except ImportError:
                 print("PleXBMC -> Failed to import ElementTree from any known place")
 
 __addon__ = xbmcaddon.Addon()
+__plugin__ = __addon__.getAddonInfo('name')
+__version__ = __addon__.getAddonInfo('version')
+__icon__ = __addon__.getAddonInfo('icon')
 __cachedir__ = __addon__.getAddonInfo('profile')
 __settings__ = xbmcaddon.Addon(id='plugin.video.plexbmc')
 __cwd__ = __settings__.getAddonInfo('path')
 BASE_RESOURCE_PATH = xbmc.translatePath(os.path.join(__cwd__, 'resources', 'lib'))
 PLUGINPATH = xbmc.translatePath(os.path.join(__cwd__))
-CACHEDATA = __cachedir__
 sys.path.append(BASE_RESOURCE_PATH)
-PLEXBMC_VERSION = __addon__.getAddonInfo('version')
-
-#__cachedir__ = xbmcaddon.Addon().getAddonInfo('profile')
-#__settings__ = xbmcaddon.Addon(id='plugin.video.plexbmc')
-#__cwd__ = __settings__.getAddonInfo('path')
-#BASE_RESOURCE_PATH = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
-#PLUGINPATH=xbmc.translatePath( os.path.join( __cwd__) )
-#CACHEDATA=__cachedir__
-#sys.path.append(BASE_RESOURCE_PATH)
-#PLEXBMC_VERSION="3.2.2"
+CACHEDATA = __cachedir__
+PLEXBMC_VERSION = __version__
 
 print "===== PLEXBMC START ====="
-
 print "PleXBMC -> running Python: " + str(sys.version_info)
 print "PleXBMC -> running PleXBMC: " + str(PLEXBMC_VERSION)
 
@@ -275,7 +268,7 @@ def discoverAllServers( ):
             else:
                 GDM_debug=0
 
-            gdm_cache_file=CACHEDATA+"/gdm.server.cache"
+            gdm_cache_file=CACHEDATA+"gdm.server.cache"
             gdm_cache_ok = False    
                       
             gdm_cache_ok, gdm_server_name = checkCache(gdm_cache_file)
@@ -321,7 +314,7 @@ def discoverAllServers( ):
     if __settings__.getSetting('myplex_user') != "":
         printDebug( "PleXBMC -> Adding myplex as a server location", False)
 
-        myplex_cache_file=CACHEDATA+"/myplex.server.cache"     
+        myplex_cache_file=CACHEDATA+"myplex.server.cache"
         success, das_myplex = checkCache(myplex_cache_file)
         
         if not success:
@@ -517,7 +510,7 @@ def deduplicateServers( server_list ):
 def getServerSections ( ip_address, port, name, uuid):
     printDebug("== ENTER: getServerSections ==", False)
 
-    cache_file = "%s/%s.sections.cache" % (CACHEDATA, uuid)
+    cache_file = "%s%s.sections.cache" % (CACHEDATA, uuid)
     success, temp_list = checkCache(cache_file)
     
     if not success:
@@ -556,7 +549,7 @@ def getServerSections ( ip_address, port, name, uuid):
 def getMyplexSections ( ):
     printDebug("== ENTER: getMyplexSections ==", False)
     
-    cache_file = "%s/myplex.sections.cache" % (CACHEDATA)
+    cache_file = "%smyplex.sections.cache" % (CACHEDATA)
     success, temp_list = checkCache(cache_file)
     
     if not success:
@@ -1245,7 +1238,7 @@ def displaySections( filter=None, shared=False ):
             addGUIItem(u,details,extraData)
         
         #All XML entries have been parsed and we are ready to allow the user to browse around.  So end the screen listing.
-        xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+        xbmcplugin.endOfDirectory(pluginhandle, cacheToDisc=False)
 
 def enforceSkinView(mode):
     '''
@@ -2476,27 +2469,23 @@ def getContent( url ):
 
     return
 
-def processDirectory( url, tree=None ):
+def processDirectory(url, tree=None):
     printDebug("== ENTER: processDirectory ==", False)
     printDebug("Processing secondary menus")
     xbmcplugin.setContent(pluginhandle, 'files')
 
-    server=getServerFromURL(url)
+    server = getServerFromURL(url)
     setWindowHeading(tree)
     for directory in tree:
-        details={'title' : directory.get('title','Unknown').encode('utf-8') }
-        extraData={'thumb'        : getThumb(directory, server),
-                   'fanart_image' : getFanart(tree, server, False) }
+        details = {'title': directory.get('title', 'Unknown').encode('utf-8')}
+        extraData = {'thumb': getThumb(directory, server)}
 
-        if extraData['thumb'] == '':
-            extraData['thumb']=extraData['fanart_image']
+        extraData['mode'] = _MODE_GETCONTENT
+        u = '%s' % (getLinkURL(url, directory, server))
 
-        extraData['mode']=_MODE_GETCONTENT
-        u='%s' % ( getLinkURL(url,directory,server))
+        addGUIItem(u, details, extraData)
 
-        addGUIItem(u,details,extraData)
-
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle, cacheToDisc=True)
 
 def getMasterServer(all=False):
     printDebug("== ENTER: getmasterserver ==", False)
@@ -4425,21 +4414,25 @@ def fullShelf(server_list=None):
                 continue
 
             m_url="plugin://plugin.video.plexbmc?url=%s&mode=%s&t=%s%s" % ( getLinkURL('http://'+server_address,media,server_address), _MODE_PLAYSHELF, randomNumber, aToken)
-            m_thumb=getShelfThumb(media,server_address,seasonThumb=0)+aToken
-            movie_runtime=media.get('duration','0')
-            movie_runtime=str(int(float(movie_runtime)/1000/60))
+            m_thumb = getShelfThumb(media,server_address,seasonThumb=0)+aToken
+            movie_runtime = media.get('duration', '0')
+            movie_runtime = str(int(float(movie_runtime)/1000/60))
+            if media.get('rating') > 0:
+                movie_rating = str(round(float(media.get('rating')), 1))
+            else:
+                movie_rating = ''
 
             WINDOW.setProperty("Plexbmc.LatestMovie.%s.Path" % recentMovieCount, m_url)
-            WINDOW.setProperty("Plexbmc.LatestMovie.%s.Title" % recentMovieCount, media.get('title','Unknown').encode('UTF-8'))
-            WINDOW.setProperty("Plexbmc.LatestMovie.%s.Year" % recentMovieCount, media.get('year','').encode('UTF-8'))
-            WINDOW.setProperty("Plexbmc.LatestMovie.%s.Rating" % recentMovieCount, media.get('rating','').encode('UTF-8'))
+            WINDOW.setProperty("Plexbmc.LatestMovie.%s.Title" % recentMovieCount, media.get('title', 'Unknown').encode('UTF-8'))
+            WINDOW.setProperty("Plexbmc.LatestMovie.%s.Year" % recentMovieCount, media.get('year', '').encode('UTF-8'))
+            WINDOW.setProperty("Plexbmc.LatestMovie.%s.Rating" % recentMovieCount, movie_rating)
             WINDOW.setProperty("Plexbmc.LatestMovie.%s.Duration" % recentMovieCount, movie_runtime)
             WINDOW.setProperty("Plexbmc.LatestMovie.%s.Thumb" % recentMovieCount, m_thumb)
             WINDOW.setProperty("Plexbmc.LatestMovie.%s.uuid" % recentMovieCount, libuuid.encode('UTF-8'))
 
             recentMovieCount += 1
 
-            printDebug("Building Recent window title: %s" % media.get('title','Unknown').encode('UTF-8'))
+            printDebug("Building Recent window title: %s" % media.get('title', 'Unknown').encode('UTF-8'))
             printDebug("Building Recent window url: %s" % m_url)
             printDebug("Building Recent window thumb: %s" % m_thumb)
 
@@ -4553,11 +4546,18 @@ def fullShelf(server_list=None):
 
             m_url="plugin://plugin.video.plexbmc?url=%s&mode=%s&t=%s%s" % ( getLinkURL('http://'+server_address,media,server_address), _MODE_PLAYSHELF, randomNumber, aToken)
             m_thumb=getShelfThumb(media,server_address,seasonThumb=0)+aToken
+            m_runtime = media.get('duration', '0')
+            m_runtime = str(int(float(movie_runtime)/1000/60))
+            if media.get('rating') > 0:
+                m_rating = str(round(float(media.get('rating')), 1))
+            else:
+                m_rating = ''
 
             WINDOW.setProperty("Plexbmc.OnDeckMovie.%s.Path" % ondeckMovieCount, m_url)
             WINDOW.setProperty("Plexbmc.OnDeckMovie.%s.Title" % ondeckMovieCount, media.get('title','Unknown').encode('UTF-8'))
             WINDOW.setProperty("Plexbmc.OnDeckMovie.%s.Year" % ondeckMovieCount, media.get('year','').encode('UTF-8'))
-            WINDOW.setProperty("Plexbmc.OnDeckMovie.%s.Rating" % ondeckMovieCount, media.get('rating',''))
+            WINDOW.setProperty("Plexbmc.OnDeckMovie.%s.Rating" % ondeckMovieCount, m_rating)
+            WINDOW.setProperty("Plexbmc.OnDeckMovie.%s.Duration" % ondeckMovieCount, m_runtime)
             WINDOW.setProperty("Plexbmc.OnDeckMovie.%s.Thumb" % ondeckMovieCount, m_thumb)
             WINDOW.setProperty("Plexbmc.OnDeckMovie.%s.uuid" % ondeckMovieCount, libuuid.encode('UTF-8'))
 
@@ -4618,6 +4618,7 @@ def fullShelf(server_list=None):
             printDebug("Building OnDeck window thumb: %s" % s_thumb)
 
     clearOnDeckShelf(ondeckMovieCount, ondeckSeasonCount)
+
     if __settings__.getSetting('channelShelf') == "false":
         shelfChannel(server_list)
     else:
@@ -4681,7 +4682,6 @@ def clearShelf (movieCount=0, seasonCount=0, musicCount=0, photoCount=0):
         printDebug("Done clearing photos")
     except: pass
 
-
     return
 def clearOnDeckShelf (movieCount=0, seasonCount=0):
     #Clear out old data
@@ -4693,6 +4693,9 @@ def clearOnDeckShelf (movieCount=0, seasonCount=0):
             WINDOW.clearProperty("Plexbmc.OnDeckMovie.%s.Path"   % ( i ) )
             WINDOW.clearProperty("Plexbmc.OnDeckMovie.%s.Title"  % ( i ) )
             WINDOW.clearProperty("Plexbmc.OnDeckMovie.%s.Thumb"  % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckMovie.%s.Rating"  % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckMovie.%s.Duration"  % ( i ) )
+            WINDOW.clearProperty("Plexbmc.OnDeckMovie.%s.Year"  % ( i ) )
             WINDOW.clearProperty("Plexbmc.OnDeckMovie.%s.uuid"  % ( i ) )
         printDebug("Done clearing On Deck movies")
     except: pass
@@ -5118,7 +5121,7 @@ def deletecache():
         if i == cache_header:
             continue
     
-        success = xbmcvfs.delete(CACHEDATA+"/"+i)
+        success = xbmcvfs.delete(CACHEDATA+i)
         if success:
             printDebug("SUCCESSFUL: removed %s" % i)
         else:
