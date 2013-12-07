@@ -612,7 +612,7 @@ def getAllSections( server_list = None ):
                 myplex_section_list += section_details
                 myplex_complete = True
 
-    '''Remove any myplex sections that are locally available'''
+    #Remove any myplex sections that are locally available
     if myplex_complete and local_complete:
     
         printDebug ("Deduplicating myplex sections list")
@@ -1002,7 +1002,7 @@ def addGUIItem( url, details, extraData, context=None, folder=True ):
             extraData['token']=_PARAM_TOKEN
 
         aToken=getAuthDetails(extraData)
-        qToken=getAuthDetails(extraData, prefix='?')
+        qToken='?'+aToken
 
         if extraData.get('mode',None) is None:
             mode="&mode=0"
@@ -1019,19 +1019,23 @@ def addGUIItem( url, details, extraData, context=None, folder=True ):
             
         if extraData.get('parameters'):
             for argument, value in extraData.get('parameters').items():
-                u="%s&%s=%s" % ( u, argument, urllib.quote(value) )
+                u = "%s&%s=%s" % (u, argument, urllib.quote(value))
 
         printDebug("URL to use for listing: " + u)
 
         #Create the ListItem that will be displayed
-        thumb=str(extraData.get('thumb',''))
-        if thumb.startswith('http'):
-            if '?' in thumb:
-                thumbPath=thumb+aToken
-            else:
-                thumbPath=thumb+qToken
-        else:
-            thumbPath=thumb
+        thumbPath = getThumb(extraData, url)
+
+        #Use getThumb here as it will allow for smaller covers
+
+        #thumb=str(extraData.get('thumb',''))
+        #if thumb.startswith('http'):
+        #    if '?' in thumb:
+        #        thumbPath = thumb+aToken
+        #    else:
+        #        thumbPath = thumb+qToken
+        #else:
+        #    thumbPath = thumb
 
         liz=xbmcgui.ListItem(details.get('title','Unknown'), iconImage=thumbPath, thumbnailImage=thumbPath)
 
@@ -1089,11 +1093,12 @@ def addGUIItem( url, details, extraData, context=None, folder=True ):
         except: pass
 
         #Set the fanart image if it has been enabled
-        fanart=str(extraData.get('fanart_image',''))
-        if '?' in fanart:
-            liz.setProperty('fanart_image', fanart+aToken)
-        else:
-            liz.setProperty('fanart_image', fanart+qToken)
+        fanart = str(extraData.get('fanart_image'))
+        if fanart:
+            if '?' in fanart:
+                liz.setProperty('fanart_image', fanart+aToken)
+            else:
+                liz.setProperty('fanart_image', fanart+qToken)
 
         printDebug( "Setting fan art as " + fanart +" with headers: "+ aToken)
 
@@ -1186,7 +1191,7 @@ def displaySections( filter=None, shared=False ):
             addGUIItem(s_url, details,extraData, context)
 
         if shared:
-            xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+            xbmcplugin.endOfDirectory(pluginhandle, cacheToDisc=True)
             return
                     
         #For each of the servers we have identified
@@ -1236,17 +1241,20 @@ def displaySections( filter=None, shared=False ):
 
             u="http://nothing"
             addGUIItem(u,details,extraData)
-        
+
+
         #All XML entries have been parsed and we are ready to allow the user to browse around.  So end the screen listing.
-        xbmcplugin.endOfDirectory(pluginhandle, cacheToDisc=False)
+        xbmcplugin.endOfDirectory(pluginhandle, cacheToDisc=True)
 
 def enforceSkinView(mode):
+
     '''
-        Ensure that the views are consistance across plugin usage, depending
-        upon view selected by user
-        @input: User view selection
-        @return: view id for skin
+    Ensure that the views are consistance across plugin usage, depending
+    upon view selected by user
+    @input: User view selection
+    @return: view id for skin
     '''
+
     printDebug("== ENTER: enforceSkinView ==", False)
 
     if __settings__.getSetting('skinoverride') == "false":
@@ -1499,7 +1507,7 @@ def TVShows( url, tree=None ):
     if view_id:
         xbmc.executebuiltin("Container.SetViewMode(%s)" % view_id)
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle, cacheToDisc=True)
 
 def TVSeasons( url ):
     printDebug("== ENTER: season() ==", False)
@@ -1584,7 +1592,7 @@ def TVSeasons( url ):
     if view_id:
         xbmc.executebuiltin("Container.SetViewMode(%s)" % view_id)
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def TVEpisodes( url, tree=None ):
     printDebug("== ENTER: TVEpisodes() ==", False)
@@ -1705,7 +1713,7 @@ def TVEpisodes( url, tree=None ):
     if view_id:
         xbmc.executebuiltin("Container.SetViewMode(%s)" % view_id)
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def getAudioSubtitlesMedia( server, tree, full=False ):
     '''
@@ -2475,17 +2483,56 @@ def processDirectory(url, tree=None):
     xbmcplugin.setContent(pluginhandle, 'files')
 
     server = getServerFromURL(url)
-    setWindowHeading(tree)
+
+    WINDOW = xbmcgui.Window( xbmcgui.getCurrentWindowId() )
+    WINDOW.setProperty("heading", tree.attrib["title1"])
+
     for directory in tree:
-        details = {'title': directory.get('title', 'Unknown').encode('utf-8')}
-        extraData = {'thumb': getThumb(directory, server)}
+        item_title = directory.get('title', '').encode('utf-8')
+        extraData = {'thumb': g_loc+'/resources/plex.png'}
 
         extraData['mode'] = _MODE_GETCONTENT
         u = '%s' % (getLinkURL(url, directory, server))
 
-        addGUIItem(u, details, extraData)
+        addDIRItem(u, item_title, extraData)
 
     xbmcplugin.endOfDirectory(pluginhandle, cacheToDisc=True)
+
+def addDIRItem( url, item_title, extraData, folder=True ):
+        printDebug("== ENTER: addDIRItem ==", False)
+        printDebug("Adding Dir for [%s]" % item_title)
+        printDebug("Passed extraData: " + str(extraData))
+
+        if item_title == '':
+            return
+
+        if (extraData.get('token',None) is None) and _PARAM_TOKEN:
+            extraData['token']=_PARAM_TOKEN
+
+        aToken=getAuthDetails(extraData)
+
+        mode="&mode=%s" % extraData['mode']
+
+        #Create the URL to pass to the item
+        if url.startswith('http') or url.startswith('file'):
+            u=sys.argv[0]+"?url="+urllib.quote(url)+mode+aToken
+        else:
+            u=sys.argv[0]+"?url="+str(url)+mode+aToken
+
+        if extraData.get('parameters'):
+            for argument, value in extraData.get('parameters').items():
+                u = "%s&%s=%s" % (u, argument, urllib.quote(value))
+
+        printDebug("URL to use for listing: " + u)
+
+        #Create the ListItem that will be displayed
+        thumbPath = g_loc+'/resources/plex.png'
+
+        liz=xbmcgui.ListItem(item_title, thumbnailImage=thumbPath)
+
+        printDebug("Setting thumbnail as " + thumbPath)
+
+        return xbmcplugin.addDirectoryItem(handle=pluginhandle,url=u,listitem=liz,isFolder=folder)
 
 def getMasterServer(all=False):
     printDebug("== ENTER: getmasterserver ==", False)
@@ -2628,7 +2675,7 @@ def artist( url, tree=None ):
     if view_id:
         xbmc.executebuiltin("Container.SetViewMode(%s)" % view_id)
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def albums( url, tree=None ):
     printDebug("== ENTER: albums ==", False)
@@ -2670,7 +2717,7 @@ def albums( url, tree=None ):
     if view_id:
         xbmc.executebuiltin("Container.SetViewMode(%s)" % view_id)
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def tracks( url,tree=None ):
     printDebug("== ENTER: tracks ==", False)
@@ -2696,7 +2743,7 @@ def tracks( url,tree=None ):
     if view_id:
         xbmc.executebuiltin("Container.SetViewMode(%s)" % view_id)
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def getXML (url, tree=None):
     printDebug("== ENTER: getXML ==", False)
@@ -2801,7 +2848,7 @@ def PlexPlugins(url, tree=None):
             addGUIItem(url, details, extraData)
 
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def channelSettings ( url, settingID ):
     '''
@@ -2927,7 +2974,7 @@ def processXML( url, tree=None ):
             TVEpisodes(url, tree)
             return
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def movieTag(url, server, tree, movie, randomNumber):
 
@@ -3115,7 +3162,7 @@ def photo( url,tree=None ):
 
             addGUIItem(u,details,extraData,folder=False)
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def music( url, tree=None ):
     printDebug("== ENTER: music ==", False)
@@ -3187,7 +3234,7 @@ def music( url, tree=None ):
     if view_id:
         xbmc.executebuiltin("Container.SetViewMode(%s)" % view_id)
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def getThumb (data, server, transcode=True, width=720, height=720):
     '''
@@ -3365,7 +3412,7 @@ def plexOnline( url ):
         
         addGUIItem(u, details, extraData)
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def install( url, name ):
     printDebug("== ENTER: install ==", False)
@@ -3454,7 +3501,7 @@ def channelView( url ):
 
         addGUIItem(p_url,details,extraData)
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def photoTranscode( server, url, width=1280, height=720 ):
         return 'http://%s/photo/:/transcode?url=%s&width=%s&height=%s' % (server, urllib.quote_plus(url), width, height)
@@ -4385,29 +4432,26 @@ def fullShelf(server_list=None):
             continue
 
         global _PARAM_TOKEN
-        _PARAM_TOKEN = server_details.get('token','')
-        aToken=getAuthDetails({'token': _PARAM_TOKEN} )
-        qToken=getAuthDetails({'token': _PARAM_TOKEN}, prefix='?')
+        _PARAM_TOKEN = server_details.get('token', '')
+        aToken=getAuthDetails({'token': _PARAM_TOKEN})
+        qToken='?' + aToken
 
-        ra_file_count = 1
+        #ra_log_count = 1
 
         for section in getAllSections(server_list):
             if (section.get("type","unknown") != "episode" and section.get("type","unknown") != "artist" and section.get("type","unknown") != "movie" and section.get("type","unknown") != "show" and section.get("type","unknown") != "photo"):
                 continue
             tree=getXML('http://'+server_details['server']+":"+server_details['port']+section.get("path")+"/recentlyAdded")
 
+            '''
             eetee = etree.ElementTree()
             eetee._setroot(tree)
-
-            '''
             logfile = PLUGINPATH+"/RecentlyAdded"+ str(ra_file_count) + ".xml"
             logfileh = open(logfile, "w")
             eetee.write(logfileh)
             logfileh.close()
+            ra_log_count += 1
             '''
-
-            ra_file_count += 1
-
             if tree is None:
                 #xbmc.executebuiltin("XBMC.Notification(Unable to contact server: "+server_details['serverName']+",)")
                 #clearShelf()
@@ -4415,15 +4459,29 @@ def fullShelf(server_list=None):
                 print "PLEXBMC -> RecentlyAdded items not found on: "+server_details['serverName']+section.get("path")
                 continue
 
-            ra_item_count =1
-
+            #Dont limit episodes and stack them to seasons
+            libraryuuid = tree.attrib["librarySectionUUID"]
             for eachitem in tree:
-                if ra_item_count > 15: break
+
+                if eachitem.get("type", "") == "episode":
+                    key = int(eachitem.get("parentRatingKey"))
+                    if key in recent_list:
+                        pass
+                    else:
+                        recent_list[key] = (eachitem, server_details['server'] + ":" + server_details['port'], aToken, qToken, libraryuuid)
+                else:
+                    pass
+
+            #Make recent list for all items except episodes
+            ra_item_count = 1
+            for eachitem in tree:
+                if ra_item_count > 15:
+                    break
+
                 ra_item_count +=1
 
-                libraryuuid = tree.attrib["librarySectionUUID"]
                 if eachitem.get("type", "") == "episode":
-                    recent_list[int(eachitem.get("parentRatingKey", 0))] = (eachitem, server_details['server'] + ":" + server_details['port'], aToken, qToken, libraryuuid)
+                    pass
                 else:
                     recent_list[full_count] = (eachitem, server_details['server']+":"+server_details['port'], aToken, qToken, libraryuuid)
                     full_count += 1
@@ -4437,7 +4495,8 @@ def fullShelf(server_list=None):
             logfileh.write("%s\n" % item)
         logfileh.close()
         '''
-        deck_file_count = 1
+
+        #deck_log_count = 1
 
         for section in getAllSections(server_list):
             if (section.get("type","unknown") != "episode" and section.get("type","unknown") != "movie" and section.get("type","unknown") != "show"):
@@ -4445,17 +4504,15 @@ def fullShelf(server_list=None):
 
             tree=getXML('http://'+server_details['server']+":"+server_details['port']+section.get("path")+"/onDeck")
 
+            '''
             eetee = etree.ElementTree()
             eetee._setroot(tree)
-
-            '''
             logfile = PLUGINPATH+"/OnDeck"+ str(deck_file_count) + ".xml"
             logfileh = open(logfile, "w")
             eetee.write(logfileh)
             logfileh.close()
+            deck_log_count += 1
             '''
-
-            deck_file_count += 1
 
             if tree is None:
                 #xbmc.executebuiltin("XBMC.Notification(Unable to contact server: "+server_details['serverName']+",)")
@@ -4465,6 +4522,7 @@ def fullShelf(server_list=None):
                 continue
 
             deck_item_count = 1
+            libraryuuid = tree.attrib["librarySectionUUID"]
             for eachitem in tree:
                 if deck_item_count > 15: break
                 deck_item_count +=1
@@ -4474,7 +4532,7 @@ def fullShelf(server_list=None):
                 full_count += 1
 
     #For each of the servers we have identified
-    for index in sorted(recent_list):
+    for index in recent_list:
 
         media = recent_list[index][0]
         server_address = recent_list[index][1]
@@ -4972,7 +5030,7 @@ def displayServers( url ):
 
         addGUIItem(s_url, details, extraData )
 
-    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=False)
+    xbmcplugin.endOfDirectory(pluginhandle,cacheToDisc=True)
 
 def getTranscodeSettings( override=False ):
     printDebug("== ENTER: gettranscodesettings ==", False)

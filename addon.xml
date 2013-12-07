@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon  id="plugin.video.plexbmc" 
-        name="PleXBMC (modded ver)" 
-        version="3.3.3" 
-        provider-name="Hippojay (plexbmc@h-jay.com) - mod by pecinko,KodeStar,zeflash">
+<addon  id="plugin.video.plexbmc" name="PleXBMC" version="3.3.4" provider-name="Hippojay (plexbmc@h-jay.com) - mod by pecinko,KodeStar,zeflash">
   <requires>
     <import addon="xbmc.python" version="2.1.0"/>
   </requires>
-  <extension    point="xbmc.python.pluginsource"
-                library="default.py">
+  <extension point="xbmc.python.pluginsource" library="default.py">
     <provides>video audio image</provides>
   </extension>
   <extension point="xbmc.addon.metadata">
