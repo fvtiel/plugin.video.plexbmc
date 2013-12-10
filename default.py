@@ -2476,62 +2476,27 @@ def getContent( url ):
 
     return
 
-def processDirectory(url, tree=None):
+def processDirectory( url, tree=None ):
     printDebug("== ENTER: processDirectory ==", False)
     printDebug("Processing secondary menus")
     xbmcplugin.setContent(pluginhandle, 'files')
 
     server = getServerFromURL(url)
-
-    WINDOW = xbmcgui.Window( xbmcgui.getCurrentWindowId() )
-    WINDOW.setProperty("heading", tree.attrib["title1"])
-
+    setWindowHeading(tree)
     for directory in tree:
-        item_title = directory.get('title', '').encode('utf-8')
-        extraData = {'thumb': g_loc+'/resources/plex.png'}
+        details={'title' : directory.get('title','Unknown').encode('utf-8') }
+        extraData={'thumb'        : getThumb(directory, server) ,
+                   'fanart_image' : getFanart(tree, server) }
+
+        #if extraData['thumb'] == '':
+        #    extraData['thumb']=extraData['fanart_image']
 
         extraData['mode'] = _MODE_GETCONTENT
-        u = '%s' % (getLinkURL(url, directory, server))
+        u='%s' % (getLinkURL(url, directory, server))
 
-        addDIRItem(u, item_title, extraData)
+        addGUIItem(u, details, extraData)
 
     xbmcplugin.endOfDirectory(pluginhandle, cacheToDisc=True)
-
-def addDIRItem( url, item_title, extraData, folder=True ):
-        printDebug("== ENTER: addDIRItem ==", False)
-        printDebug("Adding Dir for [%s]" % item_title)
-        printDebug("Passed extraData: " + str(extraData))
-
-        if item_title == '':
-            return
-
-        if (extraData.get('token',None) is None) and _PARAM_TOKEN:
-            extraData['token']=_PARAM_TOKEN
-
-        aToken=getAuthDetails(extraData)
-
-        mode="&mode=%s" % extraData['mode']
-
-        #Create the URL to pass to the item
-        if url.startswith('http') or url.startswith('file'):
-            u=sys.argv[0]+"?url="+urllib.quote(url)+mode+aToken
-        else:
-            u=sys.argv[0]+"?url="+str(url)+mode+aToken
-
-        if extraData.get('parameters'):
-            for argument, value in extraData.get('parameters').items():
-                u = "%s&%s=%s" % (u, argument, urllib.quote(value))
-
-        printDebug("URL to use for listing: " + u)
-
-        #Create the ListItem that will be displayed
-        thumbPath = g_loc+'/resources/plex.png'
-
-        liz=xbmcgui.ListItem(item_title, thumbnailImage=thumbPath)
-
-        printDebug("Setting thumbnail as " + thumbPath)
-
-        return xbmcplugin.addDirectoryItem(handle=pluginhandle,url=u,listitem=liz,isFolder=folder)
 
 def getMasterServer(all=False):
     printDebug("== ENTER: getmasterserver ==", False)
