@@ -1635,7 +1635,13 @@ def TVEpisodes( url, tree=None ):
         return
 
     setWindowHeading(tree)
+
+    #get banner thumb
     banner = tree.get('banner')
+
+    #get season thumb for SEASON NODE
+    season_thumb = tree.get('thumb', '')
+
     ShowTags=tree.findall('Video')
     server=getServerFromURL(url)
 
@@ -1705,11 +1711,15 @@ def TVEpisodes( url, tree=None ):
         if extraData['fanart_image'] == "" and g_skipimages == "false":
             extraData['fanart_image'] = sectionart
 
-        if episode.get('parentThumb', ""):
+        if season_thumb:
+            extraData['season_thumb'] = "http://" + server + season_thumb
+
+        #get ALL SEASONS thumb
+        if not season_thumb and episode.get('parentThumb', ""):
             extraData['season_thumb'] = "http://" + server + episode.get('parentThumb', "")
 
         if banner:
-            extraData['banner'] = "http://"+server+banner
+            extraData['banner'] = "http://" + server + banner
             
         #Determine what tupe of watched flag [overlay] to use
         if int(episode.get('viewCount',0)) > 0:
