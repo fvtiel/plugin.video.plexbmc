@@ -1703,7 +1703,10 @@ def TVEpisodes( url, tree=None ):
                    'resume'       : int(int(view_offset)/1000) }
 
         if extraData['fanart_image'] == "" and g_skipimages == "false":
-            extraData['fanart_image']=sectionart
+            extraData['fanart_image'] = sectionart
+
+        if episode.get('parentThumb', ""):
+            extraData['season_thumb'] = "http://" + server + episode.get('parentThumb', "")
 
         if banner:
             extraData['banner'] = "http://"+server+banner
