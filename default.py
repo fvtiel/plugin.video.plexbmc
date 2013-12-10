@@ -1168,9 +1168,9 @@ def displaySections( filter=None, shared=False ):
             if len(ds_servers) > 1:
                 details['title']=section.get('serverName')+": "+details['title']
 
-            extraData={ 'fanart_image' : getFanart(section, section.get('address')) ,
-                        'type'         : "Video" ,
-                        'thumb'        : getFanart(section, section.get('address'), False) ,
+            extraData={ 'fanart_image' : getFanart(section, section.get('address')),
+                        'type'         : "Video",
+                        'thumb'        : g_thumb,
                         'token'        : section.get('token',None) }
 
             #Determine what we are going to do process after a link is selected by the user, based on the content we find
