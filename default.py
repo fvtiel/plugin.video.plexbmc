@@ -3244,7 +3244,7 @@ def getThumb (data, server, transcode=True, width=720, height=720):
     thumbnail=data.get('thumb','').split('?t')[0].encode('utf-8')
 
     if thumbnail == '':
-        return g_loc+'/resources/plex.png'
+        return g_thumb
 
     elif thumbnail[0:4] == "http" :
         return thumbnail
@@ -3256,7 +3256,7 @@ def getThumb (data, server, transcode=True, width=720, height=720):
             return 'http://'+server+thumbnail
 
     else:
-        return g_loc+'/resources/plex.png'
+        return g_thumb
 
 def getShelfThumb(data, server, seasonThumb, width=400, height=400):
     '''
@@ -3273,7 +3273,7 @@ def getShelfThumb(data, server, seasonThumb, width=400, height=400):
         thumbnail=data.get('thumb','').split('?t')[0].encode('utf-8')
 
     if thumbnail == '':
-        return g_loc+'/resources/plex.png'
+        return g_thumb
 
     elif thumbnail[0:4] == "http" :
         return thumbnail
@@ -3285,7 +3285,7 @@ def getShelfThumb(data, server, seasonThumb, width=400, height=400):
             return 'http://'+server+thumbnail
 
     else:
-        return g_loc+'/resources/plex.png'
+        return g_thumb
 
 def getFanart (data, server, transcode=True, width=1280, height=720):
     '''
