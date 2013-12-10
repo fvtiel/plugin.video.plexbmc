@@ -225,6 +225,7 @@ g_skipmediaflags= __settings__.getSetting("skipflags")
 g_skipimages= __settings__.getSetting("skipimages")
 
 g_loc = "special://home/addons/plugin.video.plexbmc"
+g_thumb = "special://home/addons/plugin.video.plexbmc/resources/thumb.png"
 #g_loc = PLUGINPATH
 
 #Create the standard header structure and load with a User Agent to ensure we get back a response.
